@@ -125,7 +125,8 @@ static void handleScan() {
   ESP_LOGI(TAG, "Starting 5-second BLE diagnostic scan");
   web_service_log("BLE diagnostic scan started (5 seconds)");
   NimBLEScanResults results = scan->getResults(5000, false);
-  String json = "{\"count\":" + String(results.getCount()) + ",\"devices\":[";
+  const uint32_t foundCount = results.getCount();
+  String json = "{\"count\":" + String(foundCount) + ",\"devices\":[";
   bool first = true;
   for (uint32_t i = 0; i < foundCount; ++i) {
     const NimBLEAdvertisedDevice* device = results.getDevice(i);
@@ -143,6 +144,8 @@ static void handleScan() {
     json += "\"address\":\"" + jsonEscape(address) + "\",";
     json += "\"rssi\":" + String(device->getRSSI()) + ",";
     json += "\"services\":\"" + jsonEscape(services) + "\"}";
+    String foundEvent = String("BLE device: ") + (name.length() ? name : String("(unnamed)")) + " | " + address + " | RSSI " + String(device->getRSSI()) + " dBm";
+    web_service_log(foundEvent.c_str());
   }
   json += "]}";
   scan->clearResults();
