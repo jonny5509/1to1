@@ -10,6 +10,7 @@
 
 #include "muse.h"
 #include "lovense.h"
+#include "web_service.h"
 
 static const char* TAG = "main";
 
@@ -25,6 +26,8 @@ void setup() {
   Serial.println();
   Serial.println(F("RS485 RTU SDM120***"));
 
+  web_service_start();
+
   bluetooth_service_init();
 
   lovense_init();
@@ -37,6 +40,6 @@ void setup() {
 }
 
 void loop() {
-  // In this example, the main loop is not used since the lovense sensor task runs independently.
-  // You can add other tasks or functionality here if needed.
+  web_service_loop();
+  delay(2);
 }

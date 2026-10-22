@@ -79,3 +79,17 @@ flowchart LR
 	474684 -.->|"BLE (broadcast only) 🛜"| 633666{"MuSE compatible\ntoy"}
 	linkStyle 3 stroke:#009aff,fill:none
 ```
+
+
+# Multi-gateway dashboard
+
+A browser dashboard is available at [web/dashboard.html](web/dashboard.html). It can connect to multiple ESP32 gateways and send intensity/stop commands to each connected gateway independently. See [the multi-gateway guide](docs/MULTI_GATEWAY.md) for setup instructions.
+
+**Important:** this is independent control per gateway, not guaranteed one-to-one control per physical toy. LoveSpouse/MuSE commands are broadcast without a unique destination address, so compatible toys in range may all respond. The dashboard clearly reports this limitation and does not claim toy telemetry that the protocol cannot provide.
+
+
+## Local Wi-Fi dashboard
+
+The firmware starts a Wi-Fi access point and serves a local control page. After flashing, open the serial monitor at 115200 baud, connect to the SSID and password printed by the device, then visit **http://192.168.4.1/**. The page works without internet and can send intensity/stop commands to that gateway. See [the setup guide](docs/MULTI_GATEWAY.md).
+
+This is AP mode, not joining your home Wi-Fi. The local page uses HTTP and should remain on a trusted network. Current physical-toy commands are still broadcasts; nearby compatible toys may all respond.
