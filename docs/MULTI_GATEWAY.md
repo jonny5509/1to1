@@ -4,7 +4,7 @@
 
 - A browser dashboard at `web/dashboard.html` that can connect to multiple ESP32 gateways advertising the existing Lovense-compatible service.
 - Per-gateway intensity and stop commands, a “stop all connected” action, connection state, and local pairing notes.
-- A configurable BLE advertised name in `src/gateway_config.h`, so separately flashed gateways can be distinguished in the Bluetooth picker.
+- An automatically unique BLE name for each ESP32 (prefix plus the last three MAC bytes), so you do not need to build a separate firmware image for each gateway.
 
 ## Browser requirements
 
@@ -14,15 +14,15 @@ Pairing notes are stored in the browser's local storage. They are labels only; t
 
 ## Flashing multiple gateways
 
-1. Use one ESP32 board per Lovense-compatible gateway.
-2. Before building each board, edit `LVS_GATEWAY_NAME` in `src/gateway_config.h` to a distinct name, for example `LVS-Gateway01` and `LVS-Gateway02`.
-3. Build and flash each board separately using PlatformIO:
+1. Use one ESP32 board per gateway.
+2. Build and flash the same firmware to each board using PlatformIO:
    ```sh
-   pio run -e esp32s3
-   pio run -e esp32s3 -t upload
+   pio run -e esp32dev
+   pio run -e esp32dev -t upload
    ```
-   Select `esp32dev` instead if you use a classic ESP32 dev board.
-4. Place each gateway near the toy you intend to test, connect them in the dashboard, and test one at a time at low intensity.
+   Use `esp32s3` instead for an ESP32-S3 board.
+3. Each board advertises a distinct BLE name automatically, such as `LVS-Gateway-A1B2C3`, derived from its MAC address.
+4. Open the dashboard in Chrome or Edge, choose **Connect gateway**, select a gateway, then repeat for each additional gateway. Test one at a time at low intensity.
 
 ## Important protocol limitation
 
