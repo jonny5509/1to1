@@ -2,6 +2,7 @@
 #include <esp_system.h>
 #include "bluetooth_service.h"
 #include "gateway_config.h"
+#include "web_service.h"
 
 static const char* TAG = "bluetooth_service";
 
@@ -15,6 +16,7 @@ void bluetooth_service_init() {
            LVS_GATEWAY_PREFIX, mac[3], mac[4], mac[5]);
 
   NimBLEDevice::init(deviceName);
+  web_service_log((String("BLE peripheral initialized; advertised name: ") + String(deviceName)).c_str());
   NimBLEDevice::createServer();
 
   // NimBLE-Arduino 2.x API.
@@ -24,6 +26,7 @@ void bluetooth_service_init() {
 
 void bluetooth_service_start() {
   NimBLEDevice::startAdvertising();
+  web_service_log("ESP32 BLE advertising started for Lovense-compatible service");
 }
 
 void bluetooth_service_stop() {
