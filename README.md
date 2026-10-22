@@ -79,3 +79,10 @@ flowchart LR
 	474684 -.->|"BLE (broadcast only) 🛜"| 633666{"MuSE compatible\ntoy"}
 	linkStyle 3 stroke:#009aff,fill:none
 ```
+
+
+# Multi-gateway dashboard
+
+A browser dashboard is available at [web/dashboard.html](web/dashboard.html). It can connect to multiple ESP32 gateways and send intensity/stop commands to each connected gateway independently. See [the multi-gateway guide](docs/MULTI_GATEWAY.md) for setup instructions.
+
+**Important:** this is independent control per gateway, not guaranteed one-to-one control per physical toy. LoveSpouse/MuSE commands are broadcast without a unique destination address, so compatible toys in range may all respond. The dashboard clearly reports this limitation and does not claim toy telemetry that the protocol cannot provide.
