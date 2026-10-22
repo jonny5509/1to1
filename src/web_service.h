@@ -3,3 +3,6 @@
 // Starts a local Wi-Fi access point and serves the gateway control page at http://192.168.4.1/
 void web_service_start();
 void web_service_loop();
+
+ // Adds an event to the local diagnostic log shown on the ESP32 web page.
+void web_service_log(const char* message);
