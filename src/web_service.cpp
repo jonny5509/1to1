@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <esp_system.h>
+#include <esp_log.h>
 #include "muse.h"
 #include "web_service.h"
 
