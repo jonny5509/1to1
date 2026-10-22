@@ -31,3 +31,7 @@ This does **not** yet provide guaranteed one-to-one control of multiple physical
 The dashboard therefore offers independent commands **per gateway**, not verified independent commands **per physical toy**. Do not rely on the pairing note as an isolation guarantee. If multiple toys are within range, they may all react. True physical-device selection requires a verified device-specific protocol or tested RF isolation; neither is implemented or claimed here.
 
 The firmware's reported battery/status values are placeholders in the original implementation. The dashboard does not present them as physical-toy telemetry.
+
+## Publishing the installer and dashboard
+
+The workflow in `.github/workflows/build-and-deploy.yml` builds both supported firmware targets and publishes the `web/` directory to GitHub Pages when changes reach `main`. In the repository settings, enable **Settings → Pages → Build and deployment → Source: GitHub Actions**. The first Pages deployment may need this setting before it can succeed. Pull requests run firmware builds but do not deploy the site.
