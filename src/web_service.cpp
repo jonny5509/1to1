@@ -127,7 +127,7 @@ static void handleScan() {
   NimBLEScanResults results = scan->getResults(5000, false);
   String json = "{\"count\":" + String(results.getCount()) + ",\"devices\":[";
   bool first = true;
-  for (uint32_t i = 0; i < results.getCount(); ++i) {
+  for (uint32_t i = 0; i < foundCount; ++i) {
     const NimBLEAdvertisedDevice* device = results.getDevice(i);
     if (device == nullptr) continue;
     if (!first) json += ",";
@@ -146,7 +146,7 @@ static void handleScan() {
   }
   json += "]}";
   scan->clearResults();
-  web_service_log((String("BLE scan complete: ") + String(results.getCount()) + " advertisement(s) detected").c_str());
+  web_service_log((String("BLE scan complete: ") + String(foundCount) + " advertisement(s) detected").c_str());
   sendJson(200, json);
 }
 
