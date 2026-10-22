@@ -10,6 +10,18 @@ static WebServer server(80);
 static const char* TAG = "web_service";
 static String apSsid;
 static String apPassword;
+static const size_t LOG_CAPACITY = 50;
+static String eventLog[LOG_CAPACITY];
+static size_t eventLogCount = 0;
+static size_t eventLogNext = 0;
+
+void web_service_log(const char* message) {
+  String line = String(millis() / 1000) + "s | " + String(message ? message : "(empty event)");
+  eventLog[eventLogNext] = line;
+  eventLogNext = (eventLogNext + 1) % LOG_CAPACITY;
+  if (eventLogCount < LOG_CAPACITY) ++eventLogCount;
+  Serial.println(line);
+}
 
 static const char PAGE[] PROGMEM = R"HTML(
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101117"><title>LVS Gateway Debug</title>
@@ -18,16 +30,21 @@ static const char PAGE[] PROGMEM = R"HTML(
 </style></head><body><main><div class="brand"><div class="logo">LVS</div><div><h1>Gateway debug</h1><p class="muted">One ESP32 · radio diagnostics</p></div></div>
 <section class="card"><h2>ESP32 details</h2><div id="info" class="grid"><div class="muted">Loading diagnostics…</div></div><div class="buttons" style="margin-top:13px"><button id="refresh" class="primary">Refresh details</button></div><div id="debugStatus" class="status" role="status"></div></section>
 <section class="card"><h2>Nearby Bluetooth LE devices</h2><p class="muted">Scan nearby BLE advertisements and inspect names, addresses, signal strength, and advertised services. Some toys may use another radio protocol or hide/rotate their addresses.</p><div class="buttons" style="margin-top:12px"><button id="scan" class="primary">Scan for 5 seconds</button></div><div id="scanStatus" class="status" role="status">Not scanned yet</div><div id="devices"></div></section>
+<section class="card"><h2>Connection event log</h2><p class="muted">Shows BLE client connects/disconnects, commands received, scan findings, and gateway test events. Keep this page open while you connect the app or toy, then copy the log and send it back.</p><div class="buttons"><button id="refreshLogs" class="primary">Refresh log</button><button id="copyLogs">Copy log text</button></div><div id="logStatus" class="status">Waiting for events</div><pre id="logs" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:360px;overflow:auto;background:#131620;padding:12px;border-radius:10px;font:12px/1.5 ui-monospace,monospace">No events recorded yet.</pre></section>
 <section class="card"><h2>Broadcast test</h2><p class="muted">This sends the existing gateway-wide MuSE command. Start at zero and only test while you can observe the toys.</p><div style="display:flex;justify-content:space-between;gap:10px"><strong>Intensity</strong><strong id="value">0 / 20</strong></div><input id="speed" type="range" min="0" max="20" value="0" aria-label="Intensity"><div class="buttons"><button id="send" class="primary">Send test command</button><button id="stop" class="stop">Stop broadcast</button></div><div id="controlStatus" class="status" role="status">Ready</div><p class="warning">This firmware currently broadcasts MuSE commands and does not target a toy by MAC address. A discovered BLE MAC is evidence for debugging, not proof that individual control is supported.</p></section>
 </main><script>
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function req(url,options){const r=await fetch(url,options);const j=await r.json();if(!r.ok)throw new Error(j.error||'Request failed');return j}
 async function refresh(){const el=document.querySelector('#info'),st=document.querySelector('#debugStatus');st.textContent='Refreshing…';try{const j=await req('/api/status');const rows=[['BLE name',j.bleName],['Wi-Fi AP name',j.name],['AP address',j.ip],['AP MAC',j.apMac],['Wi-Fi station MAC',j.staMac],['Bluetooth MAC',j.btMac],['Uptime',j.uptime],['Free heap',j.freeHeap+' bytes'],['Chip model',j.chip],['CPU frequency',j.cpuMHz+' MHz']];el.innerHTML=rows.map(([k,v])=>'<div class="kv"><div class="k">'+esc(k)+'</div><div class="v">'+esc(v||'Unavailable')+'</div></div>').join('');st.textContent='Details refreshed'}catch(e){st.textContent='Error: '+e.message}}
 document.querySelector('#refresh').addEventListener('click',refresh);
+async function refreshLogs(){const st=document.querySelector('#logStatus'),el=document.querySelector('#logs');try{const j=await req('/api/logs');el.textContent=j.logs.length?j.logs.join('\\n'):'No events recorded yet.';st.textContent='Showing '+j.logs.length+' event(s) · refreshes automatically'}catch(e){st.textContent='Log error: '+e.message}}
+document.querySelector('#refreshLogs').addEventListener('click',refreshLogs);
+document.querySelector('#copyLogs').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(document.querySelector('#logs').textContent);document.querySelector('#logStatus').textContent='Log copied. Paste it into your reply.'}catch(e){document.querySelector('#logStatus').textContent='Clipboard unavailable; select and copy the log text manually.'}});
+
 document.querySelector('#scan').addEventListener('click',async()=>{const b=document.querySelector('#scan'),st=document.querySelector('#scanStatus'),list=document.querySelector('#devices');b.disabled=true;st.textContent='Scanning for 5 seconds…';list.innerHTML='';try{const j=await req('/api/scan',{method:'POST'});st.textContent='Scan complete: '+j.count+' device(s) found';if(!j.devices.length){list.innerHTML='<p class="muted">No BLE advertisements found. The toys may use another radio mode or may not be advertising.</p>';return}list.innerHTML=j.devices.map(d=>'<div class="device"><strong>'+esc(d.name||'(no advertised name)')+'</strong><div class="muted">'+esc(d.address)+' · RSSI '+esc(d.rssi)+' dBm</div><div class="muted">Services: '+esc(d.services||'not advertised')+'</div></div>').join('')}catch(e){st.textContent='Scan error: '+e.message}finally{b.disabled=false}});
 const slider=document.querySelector('#speed');slider.addEventListener('input',()=>document.querySelector('#value').textContent=slider.value+' / 20');
 async function command(speed){const st=document.querySelector('#controlStatus');st.textContent='Sending…';try{const j=await req('/api/vibrate',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'speed='+encodeURIComponent(speed)});st.textContent=j.message||'Command sent'}catch(e){st.textContent='Error: '+e.message}}
-document.querySelector('#send').addEventListener('click',()=>command(slider.value));document.querySelector('#stop').addEventListener('click',()=>{slider.value='0';document.querySelector('#value').textContent='0 / 20';command(0)});refresh();
+document.querySelector('#send').addEventListener('click',()=>command(slider.value));document.querySelector('#stop').addEventListener('click',()=>{slider.value='0';document.querySelector('#value').textContent='0 / 20';command(0)});refresh();refreshLogs();setInterval(refreshLogs,2000);
 </script></body></html>
 )HTML";
 
@@ -84,6 +101,18 @@ static void handleStatus() {
   sendJson(200, json);
 }
 
+static void handleLogs() {
+  String json = "{\\"logs\\":[";
+  size_t oldest = (eventLogCount == LOG_CAPACITY) ? eventLogNext : 0;
+  for (size_t i = 0; i < eventLogCount; ++i) {
+    if (i) json += ",";
+    size_t index = (oldest + i) % LOG_CAPACITY;
+    json += "\\\"" + jsonEscape(eventLog[index]) + "\\\"";
+  }
+  json += "]}";
+  sendJson(200, json);
+}
+
 static void handleScan() {
   NimBLEScan* scan = NimBLEDevice::getScan();
   if (scan == nullptr) {
@@ -94,6 +123,7 @@ static void handleScan() {
   scan->setInterval(100);
   scan->setWindow(80);
   ESP_LOGI(TAG, "Starting 5-second BLE diagnostic scan");
+  web_service_log("BLE diagnostic scan started (5 seconds)");
   NimBLEScanResults results = scan->getResults(5000, false);
   String json = "{\"count\":" + String(results.getCount()) + ",\"devices\":[";
   bool first = true;
@@ -116,6 +146,7 @@ static void handleScan() {
   }
   json += "]}";
   scan->clearResults();
+  web_service_log((String("BLE scan complete: ") + String(results.getCount()) + " advertisement(s) detected").c_str());
   sendJson(200, json);
 }
 
@@ -153,6 +184,7 @@ void web_service_start() {
   server.on("/", HTTP_GET, handleRoot);
   server.on("/api/status", HTTP_GET, handleStatus);
   server.on("/api/scan", HTTP_POST, handleScan);
+  server.on("/api/logs", HTTP_GET, handleLogs);
   server.on("/api/vibrate", HTTP_POST, handleVibrate);
   server.onNotFound([]() {
     sendJson(404, "{\"error\":\"Not found\"}");
