@@ -3,6 +3,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "muse.h"
+#include "web_service.h"
 
 static const char* TAG = "lovense";
 #define LOVENSE_SERVICE_UUID "0000fff0-0000-1000-8000-00805f9b34fb"
@@ -10,8 +11,8 @@ static const char* TAG = "lovense";
 static NimBLECharacteristic *pLovenseCharacteristic = nullptr;
 
 class ConnectionEventHandler : public NimBLEServerCallbacks {
-    void onConnect(NimBLEServer *pServer) { Serial.println("Client connected"); }
-    void onDisconnect(NimBLEServer *pServer) { Serial.println("Client disconnected"); }
+    void onConnect(NimBLEServer *pServer) { Serial.println("BLE client connected to Lovense-compatible service"); web_service_log("BLE client connected to ESP32 Lovense-compatible service"); }
+    void onDisconnect(NimBLEServer *pServer) { Serial.println("BLE client disconnected from Lovense-compatible service"); web_service_log("BLE client disconnected from ESP32 Lovense-compatible service"); }
 };
 
 std::string generate_response(const std::string& command) {
@@ -75,9 +76,13 @@ public:
         if (value.empty()) return;
         Serial.print("Received Value: ");
         Serial.println(value.c_str());
+        String event = String("BLE GATT write received: ") + String(value.c_str());
+        web_service_log(event.c_str());
         std::string response = generate_response(value);
         Serial.print("Response Value: ");
         Serial.println(response.c_str());
+        String responseEvent = String("BLE GATT response sent: ") + String(response.c_str());
+        web_service_log(responseEvent.c_str());
         pCharacteristic->setValue(response);
         pCharacteristic->notify();
     }
