@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#11131a">
+  <title>1to1 Gateway Dashboard</title>
+  <style>
+    :root{color-scheme:dark;--bg:#101117;--panel:#191b25;--panel2:#202330;--line:#303443;--text:#f3f4fa;--muted:#a5a9bb;--accent:#a6f36b;--danger:#ff7b86;--blue:#9ba8ff}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 20% 0%,#25263a 0,transparent 40%),var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+    main{max-width:1120px;margin:auto;padding:32px 20px 56px}.top{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:28px}
+    .brand{display:flex;gap:13px;align-items:center}.mark{width:44px;height:44px;display:grid;place-items:center;background:var(--accent);color:#101117;border-radius:14px;font-weight:900;font-size:20px}
+    h1{font-size:clamp(25px,4vw,36px);letter-spacing:-.04em;margin:0}.sub{color:var(--muted);margin:5px 0 0}.actions{display:flex;gap:10px;flex-wrap:wrap}
+    button,input,select{font:inherit}button{border:1px solid var(--line);border-radius:11px;background:var(--panel2);color:var(--text);padding:10px 14px;cursor:pointer;font-weight:650;transition:transform .12s,border-color .12s}button:hover{border-color:#737b94}button:active{transform:scale(.98)}button.primary{background:var(--accent);border-color:var(--accent);color:#12150e}button.danger{color:var(--danger)}button:disabled{opacity:.45;cursor:not-allowed}
+    .notice{border:1px solid #66552e;background:#282318;border-radius:14px;padding:15px 17px;margin:20px 0 26px;color:#e9dcb7}.notice strong{color:#fff0bd}.notice p{margin:5px 0 0}
+    .section-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:24px 0 14px}.section-head h2{margin:0;font-size:19px}.muted{color:var(--muted)}.small{font-size:12px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:14px}.empty{border:1px dashed #414657;border-radius:16px;padding:34px 20px;text-align:center;color:var(--muted)}.empty .emoji{font-size:28px;margin-bottom:8px}
+    .card{border:1px solid var(--line);border-radius:17px;background:linear-gradient(160deg,#1c1f2b,var(--panel) 65%);padding:18px;min-width:0}.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.device-name{font-size:17px;font-weight:750;overflow-wrap:anywhere}.status{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);margin-top:4px}.dot{width:7px;height:7px;border-radius:50%;background:#717789}.dot.on{background:var(--accent);box-shadow:0 0 9px #a6f36b77}.dot.err{background:var(--danger)}
+    .tag{border:1px solid var(--line);border-radius:8px;padding:4px 7px;font-size:11px;color:var(--muted);white-space:nowrap}.label{display:block;font-size:12px;color:var(--muted);margin:17px 0 6px}.field{width:100%;background:#11131a;border:1px solid var(--line);border-radius:10px;color:var(--text);padding:10px 11px;min-width:0}
+    .control-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:19px}.control-head .label{margin:0}.value{font-variant-numeric:tabular-nums;font-weight:750;color:var(--accent)}input[type=range]{width:100%;accent-color:var(--accent);margin:14px 0 5px;cursor:pointer}.scale{display:flex;justify-content:space-between;color:var(--muted);font-size:11px}.buttons{display:flex;gap:8px;margin-top:15px}.buttons button{flex:1}.meta{border-top:1px solid var(--line);margin-top:17px;padding-top:12px;display:grid;gap:4px;color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+    .foot{margin-top:26px;color:var(--muted);font-size:12px}.foot a{color:var(--blue)}.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);padding:11px 16px;border-radius:12px;background:#f3f4fa;color:#14151a;box-shadow:0 10px 35px #0008;max-width:calc(100% - 30px);display:none;z-index:5}.toast.show{display:block}
+    @media(max-width:540px){main{padding:22px 14px 40px}.top{align-items:flex-start}.actions{width:100%}.actions button{flex:1}.card{padding:15px}}
+  </style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div class="brand"><div class="mark">1:1</div><div><h1>Gateway dashboard</h1><p class="sub">Connect and control separate LVS-Gateway ESP32s.</p></div></div>
+    <div class="actions"><button id="connect" class="primary">＋ Connect gateway</button><button id="stopAll" class="danger">Stop all connected</button></div>
+  </header>
+
+  <section class="notice" aria-label="Important device targeting note">
+    <strong>Know what is actually paired</strong>
+    <p>This dashboard sends commands to each connected gateway independently. The current LoveSpouse/MuSE protocol is a radio broadcast without a unique toy address, so every compatible toy in range may react. A label such as “Toy 1” is a note, not proof of physical-device isolation. True 1-to-1 control requires a supported addressing/channel mechanism or verified radio isolation.</p>
+  </section>
+
+  <div class="section-head"><div><h2>Your gateways</h2><div class="muted small" id="count">0 connected</div></div><span class="tag">Web Bluetooth</span></div>
+  <section id="devices" class="grid" aria-live="polite">
+    <div class="empty" id="empty"><div class="emoji">⌁</div><strong>No gateways connected</strong><div class="small">Use Chrome or Edge on HTTPS, then connect an ESP32 running LVS-Gateway firmware.</div></div>
+  </section>
+
+  <section class="foot">
+    <p><strong>Compatibility:</strong> Web Bluetooth requires a supported browser and a secure context (HTTPS or localhost). Connecting this dashboard may compete with another app for the gateway's BLE connection. Disconnect from XToys/Buttplug first if the connection fails.</p>
+    <p><a href="./index.html">Firmware installer</a> · <a href="https://github.com/jonny5509/1to1">Source repository</a></p>
+    <p>Gateway connection status is reported by the browser. The current firmware does not receive telemetry from the physical toy, so toy battery, presence, and actual vibration cannot be confirmed here.</p>
+  </section>
+</main>
+<div class="toast" id="toast" role="status"></div>
+<script>
+(() => {
+  'use strict';
+  const SERVICE = '0000fff0-0000-1000-8000-00805f9b34fb';
+  const CHARACTERISTIC = '0000fff0-0000-1000-8000-00805f9b34fb';
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  const devices = new Map();
+  const $ = id => document.getElementById(id);
+  let toastTimer;
+
+  function toast(message) {
+    const el = $('toast');
+    el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 3400);
+  }
+  function safeText(el, text) { el.textContent = text; return el; }
+  function make(tag, cls, text) {
+    const el = document.createElement(tag);
+    if (cls) el.className = cls;
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
+  function refreshCount() {
+    const n = [...devices.values()].filter(x => x.server && x.server.connected).length;
+    $('count').textContent = n + ' connected · ' + devices.size + ' total';
+    $('empty').style.display = devices.size ? 'none' : '';
+  }
+  function setStatus(entry, connected, message) {
+    entry.status.textContent = message || (connected ? 'Gateway connected' : 'Disconnected');
+    entry.dot.className = 'dot' + (connected ? ' on' : '');
+    entry.connectBtn.textContent = connected ? 'Disconnect' : 'Reconnect';
+    entry.connectBtn.classList.toggle('danger', connected);
+    entry.intensity.disabled = !connected;
+    entry.stopBtn.disabled = !connected;
+    entry.sendBtn.disabled = !connected;
+    refreshCount();
+  }
+  async function writeCommand(entry, command) {
+    if (!entry.server || !entry.server.connected || !entry.characteristic) throw new Error('Gateway is not connected');
+    await entry.characteristic.writeValueWithResponse(encoder.encode(command));
+    entry.lastCommand.textContent = 'Last command: ' + command;
+  }
+  async function connectEntry(entry) {
+    if (!entry.device.gatt) throw new Error('This device does not support GATT');
+    entry.server = await entry.device.gatt.connect();
+    const service = await entry.server.getPrimaryService(SERVICE);
+    entry.characteristic = await service.getCharacteristic(CHARACTERISTIC);
+    entry.device.addEventListener('gattserverdisconnected', () => {
+      entry.server = null;
+      entry.characteristic = null;
+      setStatus(entry, false, 'Gateway disconnected');
+    });
+    setStatus(entry, true, 'Gateway connected · toy telemetry unavailable');
+    try {
+      await writeCommand(entry, 'DeviceType;');
+      await new Promise(resolve => setTimeout(resolve, 120));
+      const value = await entry.characteristic.readValue();
+      const response = decoder.decode(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength)).trim();
+      if (response) entry.identity.textContent = 'Gateway response: ' + response;
+    } catch (_) {
+      entry.identity.textContent = 'Gateway connected · identity read unavailable';
+    }
+  }
+  function renderDevice(device) {
+    if (devices.has(device.id)) {
+      const old = devices.get(device.id);
+      if (old.server && old.server.connected) { toast('That gateway is already connected.'); return; }
+      old.device = device;
+      connectEntry(old).catch(e => toast('Reconnect failed: ' + e.message));
+      return;
+    }
+    const card = make('article', 'card');
+    const top = make('div', 'card-top');
+    const heading = make('div');
+    const name = make('div', 'device-name', device.name || 'LVS-Gateway');
+    const statusRow = make('div', 'status');
+    const dot = make('span', 'dot');
+    const status = make('span', '', 'Connecting…');
+    statusRow.append(dot, status);
+    heading.append(name, statusRow);
+    const tag = make('span', 'tag', 'BLE gateway');
+    top.append(heading, tag);
+
+    const label = make('label', 'label', 'Pairing note (local label only)');
+    const nickname = make('input', 'field');
+    nickname.type = 'text';
+    nickname.maxLength = 40;
+    nickname.placeholder = 'e.g. Toy 1 · Bedroom';
+    nickname.value = localStorage.getItem('1to1-label-' + device.id) || '';
+    nickname.addEventListener('change', () => {
+      localStorage.setItem('1to1-label-' + device.id, nickname.value.trim());
+      toast('Pairing note saved on this browser.');
+    });
+    label.appendChild(nickname);
+
+    const ctl = make('div', 'control-head');
+    ctl.append(make('span', 'label', 'Broadcast intensity'));
+    const value = make('span', 'value', '0%');
+    ctl.appendChild(value);
+    const intensity = make('input');
+    intensity.type = 'range'; intensity.min = '0'; intensity.max = '20'; intensity.step = '1'; intensity.value = '0';
+    intensity.setAttribute('aria-label', 'Broadcast intensity');
+    intensity.addEventListener('input', () => value.textContent = Math.round(Number(intensity.value) / 20 * 100) + '%');
+    const scale = make('div', 'scale'); scale.append(make('span', '', 'Off'), make('span', '', 'Max'));
+
+    const buttons = make('div', 'buttons');
+    const sendBtn = make('button', 'primary', 'Send intensity');
+    const stopBtn = make('button', 'danger', 'Stop');
+    const connectBtn = make('button', '', 'Connecting…');
+    sendBtn.addEventListener('click', async () => {
+      try { await writeCommand(entry, 'Vibrate:' + intensity.value + ';'); toast('Command sent to ' + (nickname.value.trim() || device.name || 'gateway') + '.'); }
+      catch(e) { toast('Command failed: ' + e.message); }
+    });
+    stopBtn.addEventListener('click', async () => {
+      try { await writeCommand(entry, 'PowerOff;'); intensity.value = '0'; value.textContent = '0%'; toast('Stop command sent.'); }
+      catch(e) { toast('Stop failed: ' + e.message); }
+    });
+    connectBtn.addEventListener('click', async () => {
+      if (entry.server && entry.server.connected) {
+        entry.server.disconnect();
+        return;
+      }
+      try { await connectEntry(entry); }
+      catch(e) { setStatus(entry, false, 'Connection failed'); toast('Could not connect: ' + e.message); }
+    });
+    buttons.append(sendBtn, stopBtn, connectBtn);
+
+    const meta = make('div', 'meta');
+    const identity = make('div', '', 'Gateway identity: waiting for response');
+    const lastCommand = make('div', '', 'Last command: none');
+    const note = make('div', '', 'Toy status: not available from this protocol');
+    meta.append(identity, lastCommand, note);
+    card.append(top, label, ctl, intensity, scale, buttons, meta);
+    $('devices').appendChild(card);
+    const entry = {device, card, server:null, characteristic:null, status, dot, intensity, value, stopBtn, sendBtn, connectBtn, identity, lastCommand};
+    devices.set(device.id, entry);
+    setStatus(entry, false, 'Connecting…');
+    connectEntry(entry).catch(e => {
+      setStatus(entry, false, 'Connection failed');
+      identity.textContent = 'Connection error: ' + e.message;
+      toast('Could not connect: ' + e.message);
+    });
+  }
+  $('connect').addEventListener('click', async () => {
+    if (!('bluetooth' in navigator)) {
+      toast('Web Bluetooth is not available. Try Chrome or Edge on HTTPS.');
+      return;
+    }
+    try {
+      const device = await navigator.bluetooth.requestDevice({
+        filters: [{services: [SERVICE]}],
+        optionalServices: [SERVICE]
+      });
+      renderDevice(device);
+    } catch(e) {
+      if (e.name !== 'NotFoundError') toast('Bluetooth selection failed: ' + e.message);
+    }
+  });
+  $('stopAll').addEventListener('click', async () => {
+    const connected = [...devices.values()].filter(x => x.server && x.server.connected);
+    if (!connected.length) { toast('No connected gateways.'); return; }
+    const results = await Promise.allSettled(connected.map(x => writeCommand(x, 'PowerOff;')));
+    connected.forEach(x => { x.intensity.value = '0'; x.value.textContent = '0%'; });
+    const failed = results.filter(x => x.status === 'rejected').length;
+    toast(failed ? 'Stop sent with ' + failed + ' failure(s).' : 'Stop sent to all ' + connected.length + ' connected gateways.');
+  });
+  if (!('bluetooth' in navigator)) {
+    $('connect').title = 'Use Chrome or Edge on HTTPS for Web Bluetooth support';
+  }
+})();
+</script>
+</body>
+</html>
